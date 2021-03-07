@@ -48,7 +48,7 @@ jobs:
         run: |
           ./bin/phpstan analyze
   tests:
-    runs-on: ubuntu-latest
+    runs-on: [ ubuntu-latest, macos-latest ]
     strategy:
       fail-fast: false
       matrix:
