@@ -6,6 +6,7 @@ use Behat\Mink\Exception\DriverException;
 use Behat\Mink\Session;
 use Behat\Mink\Tests\Driver\OnNotSuccessfulTrait;
 use Behat\Mink\Tests\Driver\TestCase;
+use Facebook\WebDriver\Exception\TimeoutException;
 use OAndreyev\Mink\Driver\WebDriver;
 
 class TimeoutTest extends TestCase
@@ -75,16 +76,19 @@ class TimeoutTest extends TestCase
     public function testPageReloadTimeout(): void
     {
         $this->expectException(DriverException::class);
+        $this->session->visit($this->pathTo('/page_load.php'));
+        usleep(1_000_000);
+        $this->assertStringContainsString('success', $this->session->getPage()->getContent());
+        $this->driver->setTimeouts(array('pageLoad' => 1));
         $this->session->visit($this->pathTo('/page_load.php?sleep=2'));
-        $this->driver->setTimeouts(['pageLoad' => 1]);
-        $this->session->reload();
     }
 
     public function testScriptTimeout(): void
     {
-        $this->expectException(DriverException::class);
-        $this->driver->setTimeouts(['script' => 1]);
+        $this->expectException(TimeoutException::class);
+        $this->driver->setTimeouts(array('script' => 1));
         $this->session->visit($this->pathTo('/js_test.html'));
+        usleep(1_000_000);
 
         // @see https://w3c.github.io/webdriver/#execute-async-script
         $this->driver->executeAsyncScript(
@@ -93,7 +97,7 @@ class TimeoutTest extends TestCase
                 function(){
                     callback();
                  },
-                2000
+                3000
             );'
         );
     }
