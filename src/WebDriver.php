@@ -193,7 +193,7 @@ class WebDriver extends CoreDriver
     }
 
     /**
-     * @return RemoteWebDriver|null
+     * @return WebDriver
      */
     public function getWebDriver()
     {
@@ -266,10 +266,10 @@ class WebDriver extends CoreDriver
                 5000,
 
                 // atm I think it's best value for connection timeout
-                // if something takes more than 10s to connect
+                // if something takes more than 15s to connect
                 // something is wrong on infrastructure-level you need to fix it
                 // otherwise this technical depth will grow
-                10000
+                15000
             );
             if (\count($this->timeouts)) {
                 $this->applyTimeouts();
@@ -281,6 +281,34 @@ class WebDriver extends CoreDriver
         }
 
         return $this->webDriver;
+    }
+
+    /**
+     * Set timeout for the connect phase
+     *
+     * @param int $value Timeout in milliseconds
+     */
+    public function setConnectionTimeout(int $value): void
+    {
+        if (!$this->isStarted()) {
+            return;
+        }
+
+        $this->webDriver->getCommandExecutor()->setConnectionTimeout($value);
+    }
+
+    /**
+     * Set timeout for the connect phase
+     *
+     * @param int $value Timeout in milliseconds
+     */
+    public function setRequestTimeout(int $value): void
+    {
+        if (!$this->isStarted()) {
+            return;
+        }
+
+        $this->webDriver->getCommandExecutor()->setConnectionTimeout($value);
     }
 
     /**
