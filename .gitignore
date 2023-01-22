@@ -16,3 +16,5 @@ vendor/
 .php-cs-fixer.cache
 driver.zip
 driver.tar.gz
+.idea/
+.phpunit.result.cache
