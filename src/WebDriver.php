@@ -96,6 +96,8 @@ class WebDriver extends CoreDriver
             $this->desiredCapabilities = DesiredCapabilities::firefox();
         } elseif ('chrome' === $browserName) {
             $this->desiredCapabilities = DesiredCapabilities::chrome();
+        } else if ($browserName === 'safari') {
+            $this->desiredCapabilities = DesiredCapabilities::safari();
         } else {
             $this->desiredCapabilities = new DesiredCapabilities();
         }
