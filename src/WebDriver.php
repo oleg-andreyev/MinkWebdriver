@@ -18,6 +18,7 @@ use Facebook\WebDriver\Exception\ElementNotInteractableException;
 use Facebook\WebDriver\Exception\NoSuchCookieException;
 use Facebook\WebDriver\Exception\NoSuchElementException;
 use Facebook\WebDriver\Exception\ScriptTimeoutException;
+use Facebook\WebDriver\Exception\TimeoutException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\LocalFileDetector;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
@@ -83,29 +84,36 @@ class WebDriver extends CoreDriver
     /**
      * Instantiates the driver.
      *
-     * @param string                    $browserName         Browser name
-     * @param array<string, mixed>|null $desiredCapabilities The desired capabilities
-     * @param string                    $wdHost              The WebDriver host
+     * @param string                                        $browserName         Browser name
+     * @param array<string, mixed>|DesiredCapabilities|null $desiredCapabilities The desired capabilities
+     * @param string                                        $wdHost              The WebDriver host
      */
-    public function __construct($browserName = 'firefox', $desiredCapabilities = null, $wdHost = 'http://localhost:4444/wd/hub')
-    {
+    public function __construct(
+        string $browserName = 'firefox',
+        array|DesiredCapabilities $desiredCapabilities = null,
+        string $wdHost = 'http://localhost:4444/wd/hub'
+    ) {
         $this->wdHost = $wdHost;
         $this->browserName = $browserName;
 
-        if ('firefox' === $browserName) {
-            $this->desiredCapabilities = DesiredCapabilities::firefox();
-        } elseif ('chrome' === $browserName) {
-            $this->desiredCapabilities = DesiredCapabilities::chrome();
-        } else if ($browserName === 'safari') {
-            $this->desiredCapabilities = DesiredCapabilities::safari();
-        } else {
-            $this->desiredCapabilities = new DesiredCapabilities();
-        }
-
-        if ($desiredCapabilities) {
-            foreach ($desiredCapabilities as $key => $val) {
-                $this->desiredCapabilities->setCapability($key, $val);
+        if (!$desiredCapabilities instanceof DesiredCapabilities) {
+            if ('firefox' === $browserName) {
+                $this->desiredCapabilities = DesiredCapabilities::firefox();
+            } elseif ('chrome' === $browserName) {
+                $this->desiredCapabilities = DesiredCapabilities::chrome();
+            } else if ($browserName === 'safari') {
+                $this->desiredCapabilities = DesiredCapabilities::safari();
+            } else {
+                $this->desiredCapabilities = new DesiredCapabilities();
             }
+
+            if (is_array($desiredCapabilities)) {
+                foreach ($desiredCapabilities as $key => $val) {
+                    $this->desiredCapabilities->setCapability($key, $val);
+                }
+            }
+        } else {
+            $this->desiredCapabilities = $desiredCapabilities;
         }
     }
 
@@ -359,7 +367,12 @@ class WebDriver extends CoreDriver
             $this->webDriver->close();
         }
         $this->switchToWindow($currentWindowName);
-        $this->webDriver->manage()->deleteAllCookies();
+
+        // if about:blank (safari just empty) we cannot delete cookies.
+        if ($this->webDriver->getCurrentURL() !== '') {
+            $this->webDriver->manage()->deleteAllCookies();
+        }
+
         // TODO: resizeWindow does not accept NULL
         $this->maximizeWindow();
         // reset timeout
@@ -575,9 +588,12 @@ class WebDriver extends CoreDriver
         return $element->getTagName();
     }
 
+    /**
+     * @see https://www.w3.org/TR/webdriver1/#get-element-text
+     */
     public function getText(
         #[Language('xpath')]
-        $xpath,
+        $xpath
     ) {
         $element = $this->findElement($xpath);
         $text = $element->getText();
