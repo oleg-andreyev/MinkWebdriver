@@ -1,6 +1,14 @@
 MinkPhpWebDriver
 =================================
 
+[![Latest Stable Version](https://poser.pugx.org/oleg-andreyev/mink-phpwebdriver/v)](https://packagist.org/packages/oleg-andreyev/mink-phpwebdriver)
+[![Latest Unstable Version](https://poser.pugx.org/oleg-andreyev/mink-phpwebdriver/v/unstable)](https://packagist.org/packages/oleg-andreyev/mink-phpwebdriver)
+[![Total Downloads](https://poser.pugx.org/oleg-andreyev/mink-phpwebdriver/downloads)](https://packagist.org/packages/oleg-andreyev/mink-phpwebdriver)
+[![CI](https://github.com/oleg-andreyev/MinkPhpWebDriver/actions/workflows/ci.yml/badge.svg)](https://github.com/oleg-andreyev/MinkPhpWebDriver/actions/workflows/ci.yml)
+[![License](https://poser.pugx.org/oleg-andreyev/mink-phpwebdriver/license)](https://github.com/oleg-andreyev/MinkPhpWebDriver/blob/main/LICENSE)
+[![codecov](https://codecov.io/gh/oleg-andreyev/mink-phpwebdriver/branch/main/graph/badge.svg?token=11hgqXqod9)](https://codecov.io/gh/oleg-andreyev/mink-phpwebdriver)
+
+
 Initially it's started as [PR](https://github.com/minkphp/MinkSelenium2Driver/pull/304) to MinkSelenium2Driver
 
 Major updates include:
