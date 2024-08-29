@@ -289,9 +289,11 @@ class WebDriver extends CoreDriver
 
         try {
             $this->webDriver->quit();
-            $this->webDriver = null;
         } catch (\Exception $e) {
             throw new DriverException('Could not close connection', 0, $e);
+        } finally {
+            // Note: The finally section will be executed before the DriverException is thrown.
+            $this->webDriver = null;
         }
     }
 
