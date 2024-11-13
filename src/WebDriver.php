@@ -302,8 +302,18 @@ class WebDriver extends CoreDriver
      *
      * @throws UnsupportedDriverActionException
      */
-    public function reset()
+    public function reset(): void
     {
+        $currentWindowName = $this->getWindowName();
+        foreach ($this->getWindowNames() as $windowName) {
+            if ($windowName === $currentWindowName) {
+                continue;
+            }
+
+            $this->switchToWindow($windowName);
+            $this->webDriver->close();
+        }
+        $this->switchToWindow($currentWindowName);
         $this->webDriver->manage()->deleteAllCookies();
         // TODO: resizeWindow does not accept NULL
         $this->maximizeWindow();
@@ -417,13 +427,16 @@ class WebDriver extends CoreDriver
 
     /**
      * @param string $name
-     *
-     * @return void
      */
-    public function switchToIFrame($name = null)
+    public function switchToIFrame($name = null): void
     {
         if ($name) {
-            $element = $this->webDriver->findElement(WebDriverBy::name($name));
+            try {
+                $element = $this->webDriver->findElement(WebDriverBy::name($name));
+            } catch (NoSuchElementException) {
+                $element = $this->webDriver->findElement(WebDriverBy::id($name));
+            }
+
             $this->webDriver->switchTo()->frame($element);
         } else {
             $this->webDriver->switchTo()->defaultContent();
@@ -653,8 +666,6 @@ class WebDriver extends CoreDriver
      * @param string          $xpath
      * @param string|string[] $value
      *
-     * @return void
-     *
      * @throws DriverException
      * @throws ElementNotInteractableException
      * @throws NoSuchElementException
@@ -664,13 +675,17 @@ class WebDriver extends CoreDriver
      */
     public function setValue(
         #[Language('xpath')]
-        $xpath,
+        string $xpath,
         $value,
-    ) {
+    ): void {
         $element = $this->findElement($xpath);
         $elementName = strtolower($element->getTagName());
 
         if ('select' === $elementName) {
+            if (is_bool($value)) {
+                throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a select input', gettype($value), $xpath));
+            }
+
             $select = new WebDriverSelect($element);
 
             if (is_array($value)) {
@@ -703,6 +718,10 @@ class WebDriver extends CoreDriver
             }
 
             if ('radio' === $elementType) {
+                if (is_bool($value) || is_array($value)) {
+                    throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a radio input', gettype($value), $xpath));
+                }
+
                 $radios = new WebDriverRadios($element);
                 $radios->selectByValue($value);
 
@@ -710,6 +729,10 @@ class WebDriver extends CoreDriver
             }
 
             if ('file' === $elementType) {
+                if (is_array($value) || is_bool($value)) {
+                    throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a file input', gettype($value), $xpath));
+                }
+
                 $this->attachFile($xpath, $value);
 
                 return;
@@ -719,6 +742,10 @@ class WebDriver extends CoreDriver
             // Each OS will show native color picker
             // See https://code.google.com/p/selenium/issues/detail?id=7650
             if ('color' === $elementType) {
+                if (is_array($value) || is_bool($value)) {
+                    throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a color input', gettype($value), $xpath));
+                }
+
                 $this->executeJsOnElement($element, sprintf('return {{ELEMENT}}.value = "%s"', $value));
 
                 return;
@@ -726,6 +753,10 @@ class WebDriver extends CoreDriver
 
             // See https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement
             if ('date' === $elementType || 'time' === $elementType) {
+                if (is_array($value) || is_bool($value)) {
+                    throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a color input', gettype($value), $xpath));
+                }
+
                 $date = date(DATE_ATOM, strtotime($value));
                 $this->executeJsOnElement($element, sprintf('return {{ELEMENT}}.valueAsDate = new Date("%s")', $date));
 
@@ -733,6 +764,11 @@ class WebDriver extends CoreDriver
             }
         }
 
+        if (in_array($elementName, ['input', 'textarea'])) {
+            if (is_array($value) || is_bool($value)) {
+                throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a text input', gettype($value), $xpath));
+            }
+        }
         $value = (string) $value;
 
         if (in_array($elementName, ['input', 'textarea'])) {
