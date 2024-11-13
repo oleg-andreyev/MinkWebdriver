@@ -1,0 +1,6 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Parameter \\#1 \\$timeout_in_second of method Facebook\\\\WebDriver\\\\Remote\\\\RemoteWebDriver\\:\\:wait\\(\\) expects int, float given\\.$#"
+			count: 1
+			path: src/WebDriver.php
