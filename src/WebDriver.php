@@ -779,11 +779,11 @@ class WebDriver extends CoreDriver
 
         // Trigger a change event.
         $script = <<<EOF
-{{ELEMENT}}.dispatchEvent(new Event("change", {
-    bubbles: true,
-    cancelable: false,
-}));
-EOF;
+            {{ELEMENT}}.dispatchEvent(new Event("change", {
+                bubbles: true,
+                cancelable: false,
+            }));
+            EOF;
 
         $this->executeJsOnXpath($xpath, $script);
     }
@@ -925,15 +925,15 @@ EOF;
     private function scrollElementIntoViewIfRequired(WebDriverElement $element)
     {
         $js = <<<EOF
-    var node = {{ELEMENT}};
+                var node = {{ELEMENT}};
 
-    var rect = node.getBoundingClientRect();
-    var nodeAtRect = document.elementFromPoint(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
+                var rect = node.getBoundingClientRect();
+                var nodeAtRect = document.elementFromPoint(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
 
-    if (!node.contains(nodeAtRect)) {
-        node.scrollIntoView();
-    }
-EOF;
+                if (!node.contains(nodeAtRect)) {
+                    node.scrollIntoView();
+                }
+            EOF;
         $this->executeJsOnElement($element, $js);
     }
 

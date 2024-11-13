@@ -157,7 +157,7 @@ class WebDriverConfig extends AbstractConfig
             $firefoxOptions = array_merge($firefoxOptions, ['args' => $driverOptions['args']]);
             $desiredCapabilities->setCapability(FirefoxOptions::CAPABILITY, $firefoxOptions);
         }
-        $preferences = isset($driverOptions['preference']) ? $driverOptions['preference'] : [];
+        $preferences = $driverOptions['preference'] ?? [];
         foreach ($preferences as $key => $preference) {
             $optionsOrProfile->setPreference($key, $preference);
             // TODO

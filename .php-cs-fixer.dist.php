@@ -10,6 +10,7 @@ $finder = (new PhpCsFixer\Finder())
 return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)
     ->setRules([
+        '@PHP81Migration' => true,
         '@Symfony' => true,
     ])
     ->setFinder($finder);
