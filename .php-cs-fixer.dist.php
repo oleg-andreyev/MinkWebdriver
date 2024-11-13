@@ -11,6 +11,7 @@ return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)
     ->setRules([
         '@PHP81Migration' => true,
+        '@PHPUnit91Migration:risky' => true,
         '@Symfony' => true,
     ])
     ->setFinder($finder);
