@@ -123,7 +123,7 @@ class WebDriverConfig extends AbstractConfig
      */
     private function buildFirefoxProfile(DesiredCapabilities $desiredCapabilities, FirefoxProfile $optionsOrProfile, array $driverOptions): FirefoxProfile
     {
-        /** @var FirefoxOptions|array $firefoxOptions */
+        /* @var FirefoxOptions|array $firefoxOptions */
         if (isset($driverOptions['binary'])) {
             $firefoxOptions = $desiredCapabilities->getCapability(FirefoxOptions::CAPABILITY);
             if (empty($firefoxOptions)) {
