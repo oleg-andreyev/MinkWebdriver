@@ -215,7 +215,7 @@ class WebDriver extends CoreDriver
         string $xpath,
         #[Language('javascript')]
         string $script,
-        bool $sync = true
+        bool $sync = true,
     ): mixed {
         $element = $this->findElement($xpath);
 
@@ -496,7 +496,7 @@ class WebDriver extends CoreDriver
 
     public function findElementXpaths(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $nodes = $this->webDriver->findElements(WebDriverBy::xpath($xpath));
 
@@ -510,7 +510,7 @@ class WebDriver extends CoreDriver
 
     public function getTagName(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
 
@@ -519,7 +519,7 @@ class WebDriver extends CoreDriver
 
     public function getText(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $text = $element->getText();
@@ -534,7 +534,7 @@ class WebDriver extends CoreDriver
      */
     public function getHtml(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         return $this->executeJsOnXpath($xpath, 'return {{ELEMENT}}.innerHTML;');
     }
@@ -544,7 +544,7 @@ class WebDriver extends CoreDriver
      */
     public function getOuterHtml(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         return $this->executeJsOnXpath($xpath, 'return {{ELEMENT}}.outerHTML;');
     }
@@ -558,7 +558,7 @@ class WebDriver extends CoreDriver
     public function getAttribute(
         #[Language('xpath')]
         $xpath,
-        $name
+        $name,
     ) {
         $element = $this->findElement($xpath);
 
@@ -599,7 +599,7 @@ class WebDriver extends CoreDriver
      */
     public function getValue(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $elementName = strtolower($element->getTagName());
@@ -665,7 +665,7 @@ class WebDriver extends CoreDriver
     public function setValue(
         #[Language('xpath')]
         $xpath,
-        $value
+        $value,
     ) {
         $element = $this->findElement($xpath);
         $elementName = strtolower($element->getTagName());
@@ -765,7 +765,7 @@ EOF;
      */
     public function check(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->ensureInputType($element, $xpath, 'checkbox', 'check');
@@ -787,7 +787,7 @@ EOF;
      */
     public function uncheck(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->ensureInputType($element, $xpath, 'checkbox', 'uncheck');
@@ -806,7 +806,7 @@ EOF;
      */
     public function isChecked(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         return $this->isSelected($xpath);
     }
@@ -828,7 +828,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $value,
-        $multiple = false
+        $multiple = false,
     ) {
         $element = $this->findElement($xpath);
         $tagName = strtolower($element->getTagName());
@@ -866,7 +866,7 @@ EOF;
      */
     public function isSelected(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
 
@@ -880,7 +880,7 @@ EOF;
      */
     public function click(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->clickOnElement($element);
@@ -952,7 +952,7 @@ EOF;
      */
     public function doubleClick(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->webDriver->action()->doubleClick($element)->perform();
@@ -965,7 +965,7 @@ EOF;
      */
     public function rightClick(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->webDriver->action()->contextClick($element)->perform();
@@ -982,7 +982,7 @@ EOF;
     public function attachFile(
         #[Language('xpath')]
         $xpath,
-        $path
+        $path,
     ) {
         $element = $this->findElement($xpath);
         $this->ensureInputType($element, $xpath, 'file', 'attach a file on');
@@ -994,7 +994,7 @@ EOF;
 
     public function isVisible(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
 
@@ -1008,7 +1008,7 @@ EOF;
      */
     public function mouseOver(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->webDriver->action()->moveToElement($element)->perform();
@@ -1029,7 +1029,7 @@ EOF;
      */
     public function focus(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $action = $this->webDriver->action();
@@ -1047,7 +1047,7 @@ EOF;
      */
     public function blur(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
 
@@ -1067,7 +1067,7 @@ EOF;
         $xpath,
 
         $char,
-        $modifier = null
+        $modifier = null,
     ) {
         $this->sendKey($xpath, $char, $modifier);
     }
@@ -1092,7 +1092,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $char,
-        $modifier = null
+        $modifier = null,
     ) {
         // Own implementation of https://github.com/php-webdriver/php-webdriver/pull/803
         $element = $this->findElement($xpath);
@@ -1125,7 +1125,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $char,
-        $modifier = null
+        $modifier = null,
     ) {
         // Own implementation of https://github.com/php-webdriver/php-webdriver/pull/803
         $element = $this->findElement($xpath);
@@ -1245,7 +1245,7 @@ EOF;
      */
     public function submitForm(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $element->submit();
@@ -1286,7 +1286,7 @@ EOF;
      */
     private function findElement(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         return $this->webDriver->findElement(WebDriverBy::xpath($xpath));
     }
@@ -1307,7 +1307,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $type,
-        $action
+        $action,
     ) {
         if ('input' !== strtolower($element->getTagName()) || $type !== strtolower($element->getAttribute('type') ?: 'text')) {
             $message = 'Impossible to %s the element with XPath "%s" as it is not a %s input';
@@ -1373,7 +1373,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $char,
-        $modifier
+        $modifier,
     ) {
         $element = $this->findElement($xpath);
         $char = $this->decodeChar($char);
