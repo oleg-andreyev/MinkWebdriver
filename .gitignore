@@ -14,3 +14,5 @@ vendor/
 !bin/start_webserver.sh
 .phpunit.result.cache
 .php-cs-fixer.cache
+driver.zip
+driver.tar.gz

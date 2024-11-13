@@ -27,7 +27,7 @@
         }
     ],
     "require": {
-        "php": ">=8.0",
+        "php": ">=8.1",
         "behat/mink": "^1.10",
         "php-webdriver/webdriver": "^1.14"
     },

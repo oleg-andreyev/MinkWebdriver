@@ -40,7 +40,7 @@
         <!-- FIREFOX -->
         <!--<env name="BROWSER_NAME" value="firefox"/>-->
         <!--https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities/firefoxOptions#binary-->
-<!--        <env name="DRIVER_OPTIONS" value='{"log": {"level":"trace"}, "args": ["-headless"]}'/>-->
+        <!--        <env name="DRIVER_OPTIONS" value='{"log": {"level":"trace"}, "args": ["-headless"]}'/>-->
         <!--<env name="DRIVER_OPTIONS" value='{"log": {"level":"trace"}, "binary": "/Applications/Firefox Developer Edition.app/Contents/MacOS/firefox-bin"}'/>-->
     </php>
 </phpunit>
