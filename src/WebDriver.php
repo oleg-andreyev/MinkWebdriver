@@ -298,8 +298,6 @@ class WebDriver extends CoreDriver
     }
 
     /**
-     * @return void
-     *
      * @throws UnsupportedDriverActionException
      */
     public function reset(): void
