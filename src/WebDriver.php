@@ -661,8 +661,7 @@ class WebDriver extends CoreDriver
     }
 
     /**
-     * @param string          $xpath
-     * @param string|string[] $value
+     * @param string $xpath
      *
      * @throws DriverException
      * @throws ElementNotInteractableException
@@ -674,7 +673,7 @@ class WebDriver extends CoreDriver
     public function setValue(
         #[Language('xpath')]
         string $xpath,
-        $value,
+        mixed $value,
     ): void {
         $element = $this->findElement($xpath);
         $elementName = strtolower($element->getTagName());

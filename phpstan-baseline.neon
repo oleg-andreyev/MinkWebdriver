@@ -1,6 +1,11 @@
 parameters:
 	ignoreErrors:
 		-
+			message: "#^Method OAndreyev\\\\Mink\\\\Driver\\\\WebDriver\\:\\:setValue\\(\\) has parameter \\$value with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: src/WebDriver.php
+
+		-
 			message: "#^Parameter \\#1 \\$timeout_in_second of method Facebook\\\\WebDriver\\\\Remote\\\\RemoteWebDriver\\:\\:wait\\(\\) expects int, float given\\.$#"
 			count: 1
 			path: src/WebDriver.php
