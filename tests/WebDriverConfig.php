@@ -67,7 +67,7 @@ class WebDriverConfig extends AbstractConfig
                 $optionsOrProfile = $this->buildFirefoxProfile($desiredCapabilities, $optionsOrProfile, $driverOptions);
             } elseif ('safari' === $browser) {
                 $optionsOrProfile = [
-//                    'safari:automaticInspection' => true,
+                    //                    'safari:automaticInspection' => true,
                     'technologyPreview' => ($_SERVER['USE_SAFARI_TECHNOLOGY_PREVIEW'] ?? 'false') === 'true',
                 ];
             }

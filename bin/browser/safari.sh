@@ -2,10 +2,7 @@
 
 set -ex
 
-MACHINE_FAMILY=$1
-DRIVER_VERSION=$2
-
-if [[ $MACHINE_FAMILY != "mac" ]]; then
+if [[ $(uname -o) != "Darwin" ]]; then
     echo "Can be executed only on MacOS"
     exit 1;
 fi

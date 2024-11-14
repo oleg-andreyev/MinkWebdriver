@@ -90,8 +90,8 @@ class WebDriver extends CoreDriver
      */
     public function __construct(
         string $browserName = 'firefox',
-        array|DesiredCapabilities $desiredCapabilities = null,
-        string $wdHost = 'http://localhost:4444/wd/hub'
+        array|DesiredCapabilities|null $desiredCapabilities = null,
+        string $wdHost = 'http://localhost:4444/wd/hub',
     ) {
         $this->wdHost = $wdHost;
         $this->browserName = $browserName;
@@ -202,10 +202,7 @@ class WebDriver extends CoreDriver
         return $this->desiredCapabilities;
     }
 
-    /**
-     * @return WebDriver
-     */
-    public function getWebDriver()
+    public function getWebDriver(): ?RemoteWebDriver
     {
         return $this->webDriver;
     }
@@ -390,7 +387,7 @@ class WebDriver extends CoreDriver
     {
         try {
             $this->webDriver->navigate()->to($url);
-        } catch (\Facebook\WebDriver\Exception\TimeoutException $e) {
+        } catch (TimeoutException $e) {
             throw new DriverException($e->getMessage(), $e->getCode(), $e);
         }
     }
@@ -412,7 +409,7 @@ class WebDriver extends CoreDriver
     {
         try {
             $this->webDriver->navigate()->refresh();
-        } catch (\Facebook\WebDriver\Exception\TimeoutException $e) {
+        } catch (TimeoutException $e) {
             throw new DriverException($e->getMessage(), $e->getCode(), $e);
         }
     }
@@ -593,7 +590,7 @@ class WebDriver extends CoreDriver
      */
     public function getText(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $text = $element->getText();
@@ -1312,7 +1309,7 @@ class WebDriver extends CoreDriver
 
         try {
             return (bool) $wait->until($condition);
-        } catch (\Facebook\WebDriver\Exception\TimeoutException $e) {
+        } catch (TimeoutException $e) {
             return false;
         }
     }

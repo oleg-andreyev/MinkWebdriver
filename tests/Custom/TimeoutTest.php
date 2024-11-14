@@ -52,7 +52,7 @@ class TimeoutTest extends TestCase
             $this->markTestSkipped('\OAndreyev\Mink\Tests\Driver\Custom\TimeoutTest::testShortTimeoutDoesNotWaitForElementToAppear is skipped due to Safari hangs');
         }
 
-        $this->driver->setTimeouts(array('implicit' => 0));
+        $this->driver->setTimeouts(['implicit' => 0]);
 
         $this->session->visit($this->pathTo('/js_test.html'));
         $this->findById('waitable')->click();
@@ -68,7 +68,7 @@ class TimeoutTest extends TestCase
             $this->markTestSkipped('\OAndreyev\Mink\Tests\Driver\Custom\TimeoutTest::testShortTimeoutDoesNotWaitForElementToAppear is skipped due to Safari hangs');
         }
 
-        $this->driver->setTimeouts(array('implicit' => 5000));
+        $this->driver->setTimeouts(['implicit' => 5000]);
 
         $this->session->visit($this->pathTo('/js_test.html'));
         $this->findById('waitable')->click();
@@ -97,7 +97,7 @@ class TimeoutTest extends TestCase
     public function testScriptTimeout(): void
     {
         $this->expectException(DriverException::class);
-        $this->driver->setTimeouts(array('script' => 1));
+        $this->driver->setTimeouts(['script' => 1]);
         $this->session->visit($this->pathTo('/js_test.html'));
         sleep(1);
 
