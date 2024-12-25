@@ -721,8 +721,6 @@ class WebDriver extends CoreDriver
     }
 
     /**
-     * @param string $xpath
-     *
      * @throws DriverException
      * @throws ElementNotInteractableException
      * @throws NoSuchElementException
