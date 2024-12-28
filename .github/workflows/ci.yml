@@ -20,6 +20,7 @@ defaults:
 
 jobs:
   static:
+    name: Static analysis
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -62,6 +63,7 @@ jobs:
             browser: chrome
     continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 5
+    name: PHP=${{ matrix.php }}; Browser=${{ matrix.browser }}; Headless=${{ matrix.headless }}; Experimental=${{ matrix.experimental }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -131,7 +133,6 @@ jobs:
             xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
               geckodriver --host 127.0.0.1 -vv --port 4444 &> ./logs/geckodriver.log &
           fi
-          
           
           while ! nc -z localhost 4444 </dev/null; do echo Waiting for driver to start...; sleep 1; done
 
