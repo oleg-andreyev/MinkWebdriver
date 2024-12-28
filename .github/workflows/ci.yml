@@ -22,6 +22,7 @@ defaults:
 
 jobs:
   static:
+    name: Static analysis
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -57,12 +58,14 @@ jobs:
         php: [ 8.1, 8.2, 8.3, 8.4 ]
         browser: [ chrome, firefox ]
         experimental: [false]
+        headless: [true, false]
         include:
           - php: 8.5
             experimental: true
             browser: chrome
     continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 5
+    name: PHP=${{ matrix.php }}; Browser=${{ matrix.browser }}; Headless=${{ matrix.headless }}; Experimental=${{ matrix.experimental }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -114,16 +117,24 @@ jobs:
       - name: Start ChromeDriver
         if: ${{ matrix.browser == 'chrome' }}
         run: |
-          xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
+          if [ ${{ matrix.headless }} == "true" ]; then
             chromedriver --port=4444 --verbose --whitelisted-ips= &> ./logs/chromedriver.log &
+          else
+            xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
+              chromedriver --port=4444 --verbose --whitelisted-ips= &> ./logs/chromedriver.log &
+          fi
           
           while ! nc -z localhost 4444 </dev/null; do echo Waiting for driver to start...; sleep 1; done
 
       - name: Start GeckoDriver
         if: ${{ matrix.browser == 'firefox' }}
         run: |
-          xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
+          if [ ${{ matrix.headless }} == "true" ]; then
             geckodriver --host 127.0.0.1 -vv --port 4444 &> ./logs/geckodriver.log &
+          else
+            xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
+              geckodriver --host 127.0.0.1 -vv --port 4444 &> ./logs/geckodriver.log &
+          fi
           
           while ! nc -z localhost 4444 </dev/null; do echo Waiting for driver to start...; sleep 1; done
 
@@ -138,12 +149,20 @@ jobs:
           SYMFONY_DEPRECATIONS_HELPER: 'max[total]=999999'
           BROWSER_NAME: ${{ matrix.browser }}
         run: |
+          if [ ${{ matrix.headless }} == "true" ]; then
+            if [ ${{ matrix.browser }} == "chrome" ]; then
+              export DRIVER_OPTIONS='{"args":["headless=new"]}'
+            elif [ ${{ matrix.browser }} == "firefox" ]; then
+              export DRIVER_OPTIONS='{"args": ["-headless"]}'
+            fi
+          fi
+          
           ./bin/phpunit -v
 
       - name: Archive logs artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: logs_browser-${{ matrix.browser }}_php-${{ matrix.php }}
+          name: logs_browser-${{ matrix.browser }}_php-${{ matrix.php }}_headless-${{ matrix.headless }}_experimental-${{ matrix.experimental }}
           path: |
             logs
