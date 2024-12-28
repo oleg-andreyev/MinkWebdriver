@@ -1,15 +1,19 @@
 on:
   push:
     branches:
-      - master
+      - "master"
+      - "1.3"
+      - "1.4"
   pull_request:
     branches:
-      - master
+      - "master"
+      - "1.3"
+      - "1.4"
 
 env:
   DRIVER_URL: "http://localhost:4444"
   WEB_FIXTURES_HOST: "http://localhost:8002"
-
+  USE_SAFARI_TECHNOLOGY_PREVIEW: "false"
 defaults:
   run:
     shell: bash
@@ -20,9 +24,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: [ 8.2 ]
+        php: [ 8.3 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -30,8 +34,8 @@ jobs:
           extensions: zip, :xdebug
           tools: composer
       - id: composer-cache
-        run: echo "::set-output name=directory::$(composer config cache-dir)"
-      - uses: actions/cache@v3
+        run: echo "directory=$(composer config cache-dir)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.directory }}
           key: ${{ matrix.php }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -44,22 +48,67 @@ jobs:
         run: |
           ./bin/phpstan analyze
   tests:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        php: [ 8.0, 8.1, 8.2 ]
+        php: [ 8.1, 8.2, 8.3 ]
         browser: [ chrome, firefox ]
         experimental: [false]
+        os: [ ubuntu-latest ]
+        use_safari_technology_preview: [false]
         include:
+          - php: 8.1
+            experimental: true
+            browser: chrome
+            os: macos-latest
+
+          - php: 8.1
+            experimental: true
+            browser: firefox
+            os: macos-latest
+
+          - php: 8.2
+            experimental: true
+            browser: chrome
+            os: macos-latest
+
+          - php: 8.2
+            experimental: true
+            browser: firefox
+            os: macos-latest
+
           - php: 8.3
             experimental: true
             browser: chrome
+            os: macos-latest
+
+          - php: 8.3
+            experimental: true
+            browser: firefox
+            os: macos-latest
+
+          - php: 8.3
+            experimental: true
+            browser: safari
+            os: macos-latest
+            use_safari_technology_preview: false
+
+          - php: 8.3
+            experimental: true
+            browser: safari
+            os: macos-latest
+            use_safari_technology_preview: true
+
+          - php: 8.4
+            experimental: true
+            browser: chrome
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -71,10 +120,10 @@ jobs:
 
       - name: Determine composer cache directory
         id: composer-cache
-        run: echo "::set-output name=directory::$(composer config cache-dir)"
+        run: echo "directory=$(composer config cache-dir)" >> $GITHUB_OUTPUT
 
       - name: Cache composer dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.directory }}
           key: ${{ matrix.php }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -84,9 +133,11 @@ jobs:
         run: |
           mkdir -p ./logs
           
-          echo "::group::apt-get install"
-          sudo apt-get install xvfb
-          echo "::endgroup::"
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            echo "::group::apt-get install"
+            sudo apt-get install xvfb
+            echo "::endgroup::"
+          fi;
 
           echo "::group::composer update"
           composer update --no-interaction --prefer-dist
@@ -105,20 +156,50 @@ jobs:
       - uses: browser-actions/setup-geckodriver@latest
         if: matrix.browser == 'firefox'
 
+      - if: matrix.browser == 'safari' && matrix.use_safari_technology_preview == true
+        run: |
+          brew tap homebrew/cask-versions
+          brew install --cask safari-technology-preview
+
       - name: Start ChromeDriver
         if: ${{ matrix.browser == 'chrome' }}
         run: |
-          xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             chromedriver --port=4444 --verbose --whitelisted-ips= &> ./logs/chromedriver.log &
+          else
+            xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
+              chromedriver --port=4444 --verbose --whitelisted-ips= &> ./logs/chromedriver.log &
+          fi;
           
           while ! nc -z localhost 4444 </dev/null; do echo Waiting for driver to start...; sleep 1; done
 
       - name: Start GeckoDriver
         if: ${{ matrix.browser == 'firefox' }}
         run: |
-          xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             geckodriver --host 127.0.0.1 -vv --port 4444 &> ./logs/geckodriver.log &
+          else
+            xvfb-run --server-args="-screen 0, 1280x720x24" --auto-servernum \
+              geckodriver --host 127.0.0.1 -vv --port 4444 &> ./logs/geckodriver.log &
+          fi;
           
+          while ! nc -z localhost 4444 </dev/null; do echo Waiting for driver to start...; sleep 1; done
+
+      - name: Start SafariDriver
+        if: ${{ matrix.browser == 'safari' }}
+        run: |
+          if [[ "${{ matrix.use_safari_technology_preview }}" == true ]]; then
+            defaults read /Applications/Safari\ Technology\ Preview.app/Contents/Info CFBundleShortVersionString
+          else 
+            defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString
+          fi;
+
+          if [[ "${{ matrix.use_safari_technology_preview }}" == true ]]; then
+            /Applications/Safari\ Technology\ Preview.app/Contents/MacOS/safaridriver -p 4444 --diagnose &
+          else 
+            /usr/bin/safaridriver -p 4444 --diagnose &
+          fi;
+
           while ! nc -z localhost 4444 </dev/null; do echo Waiting for driver to start...; sleep 1; done
 
       - name: Start webserver
@@ -131,13 +212,14 @@ jobs:
         env:
           SYMFONY_DEPRECATIONS_HELPER: 'max[total]=999999'
           BROWSER_NAME: ${{ matrix.browser }}
+          USE_SAFARI_TECHNOLOGY_PREVIEW: ${{ matrix.use_safari_technology_preview }}
         run: |
           ./bin/phpunit -v
 
       - name: Archive logs artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: logs_browser-${{ matrix.browser }}_php-${{ matrix.php }}
+          name: logs_browser-${{ matrix.os }}_${{ matrix.browser }}_php-${{ matrix.php }}
           path: |
             logs

@@ -29,7 +29,7 @@ UNAME=$(uname -s)
 case "$UNAME" in
 *NT*) MACHINE_FAMILY=windows ;;
 Linux*) MACHINE_FAMILY=linux ;;
-Darwin*) MACHINE_FAMILY=mac ;;
+Darwin*) MACHINE_FAMILY=macos ;;
 esac
 
 if [ -z "$BROWSER_NAME" ]; then

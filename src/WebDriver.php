@@ -18,6 +18,7 @@ use Facebook\WebDriver\Exception\ElementNotInteractableException;
 use Facebook\WebDriver\Exception\NoSuchCookieException;
 use Facebook\WebDriver\Exception\NoSuchElementException;
 use Facebook\WebDriver\Exception\ScriptTimeoutException;
+use Facebook\WebDriver\Exception\TimeoutException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\LocalFileDetector;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
@@ -83,27 +84,36 @@ class WebDriver extends CoreDriver
     /**
      * Instantiates the driver.
      *
-     * @param string                    $browserName         Browser name
-     * @param array<string, mixed>|null $desiredCapabilities The desired capabilities
-     * @param string                    $wdHost              The WebDriver host
+     * @param string                                        $browserName         Browser name
+     * @param array<string, mixed>|DesiredCapabilities|null $desiredCapabilities The desired capabilities
+     * @param string                                        $wdHost              The WebDriver host
      */
-    public function __construct($browserName = 'firefox', $desiredCapabilities = null, $wdHost = 'http://localhost:4444/wd/hub')
-    {
+    public function __construct(
+        string $browserName = 'firefox',
+        array|DesiredCapabilities|null $desiredCapabilities = null,
+        string $wdHost = 'http://localhost:4444/wd/hub',
+    ) {
         $this->wdHost = $wdHost;
         $this->browserName = $browserName;
 
-        if ('firefox' === $browserName) {
-            $this->desiredCapabilities = DesiredCapabilities::firefox();
-        } elseif ('chrome' === $browserName) {
-            $this->desiredCapabilities = DesiredCapabilities::chrome();
-        } else {
-            $this->desiredCapabilities = new DesiredCapabilities();
-        }
-
-        if ($desiredCapabilities) {
-            foreach ($desiredCapabilities as $key => $val) {
-                $this->desiredCapabilities->setCapability($key, $val);
+        if (!$desiredCapabilities instanceof DesiredCapabilities) {
+            if ('firefox' === $browserName) {
+                $this->desiredCapabilities = DesiredCapabilities::firefox();
+            } elseif ('chrome' === $browserName) {
+                $this->desiredCapabilities = DesiredCapabilities::chrome();
+            } elseif ('safari' === $browserName) {
+                $this->desiredCapabilities = DesiredCapabilities::safari();
+            } else {
+                $this->desiredCapabilities = new DesiredCapabilities();
             }
+
+            if (is_array($desiredCapabilities)) {
+                foreach ($desiredCapabilities as $key => $val) {
+                    $this->desiredCapabilities->setCapability($key, $val);
+                }
+            }
+        } else {
+            $this->desiredCapabilities = $desiredCapabilities;
         }
     }
 
@@ -192,10 +202,7 @@ class WebDriver extends CoreDriver
         return $this->desiredCapabilities;
     }
 
-    /**
-     * @return RemoteWebDriver|null
-     */
-    public function getWebDriver()
+    public function getWebDriver(): ?RemoteWebDriver
     {
         return $this->webDriver;
     }
@@ -215,7 +222,7 @@ class WebDriver extends CoreDriver
         string $xpath,
         #[Language('javascript')]
         string $script,
-        bool $sync = true
+        bool $sync = true,
     ): mixed {
         $element = $this->findElement($xpath);
 
@@ -255,7 +262,24 @@ class WebDriver extends CoreDriver
         }
 
         try {
-            $this->webDriver = RemoteWebDriver::create($this->wdHost, $this->desiredCapabilities);
+            $this->webDriver = RemoteWebDriver::create(
+                $this->wdHost,
+                $this->desiredCapabilities,
+
+                // atm I think it's best value for connection timeout
+                // if something takes more than 5s to connect
+                // something is wrong on infrastructure-level you need to fix it
+                // otherwise this technical depth will grow
+                // if you really feel or need to override this values method `setConnectionTimeout`
+                5000,
+
+                // atm I think it's best value for connection timeout
+                // if something takes more than 15s to connect
+                // something is wrong on infrastructure-level you need to fix it
+                // otherwise this technical depth will grow
+                // if you really feel or need to override this values method `setRequestTimeout`
+                15000
+            );
             if (\count($this->timeouts)) {
                 $this->applyTimeouts();
             }
@@ -266,6 +290,34 @@ class WebDriver extends CoreDriver
         }
 
         return $this->webDriver;
+    }
+
+    /**
+     * Set timeout for the connect phase.
+     *
+     * @param int $value Timeout in milliseconds
+     */
+    public function setConnectionTimeout(int $value): void
+    {
+        if (!$this->isStarted()) {
+            return;
+        }
+
+        $this->webDriver->getCommandExecutor()->setConnectionTimeout($value);
+    }
+
+    /**
+     * Set timeout for the connect phase.
+     *
+     * @param int $value Timeout in milliseconds
+     */
+    public function setRequestTimeout(int $value): void
+    {
+        if (!$this->isStarted()) {
+            return;
+        }
+
+        $this->webDriver->getCommandExecutor()->setConnectionTimeout($value);
     }
 
     /**
@@ -289,20 +341,35 @@ class WebDriver extends CoreDriver
 
         try {
             $this->webDriver->quit();
-            $this->webDriver = null;
         } catch (\Exception $e) {
             throw new DriverException('Could not close connection', 0, $e);
+        } finally {
+            // Note: The finally section will be executed before the DriverException is thrown.
+            $this->webDriver = null;
         }
     }
 
     /**
-     * @return void
-     *
      * @throws UnsupportedDriverActionException
      */
-    public function reset()
+    public function reset(): void
     {
-        $this->webDriver->manage()->deleteAllCookies();
+        $currentWindowName = $this->getWindowName();
+        foreach ($this->getWindowNames() as $windowName) {
+            if ($windowName === $currentWindowName) {
+                continue;
+            }
+
+            $this->switchToWindow($windowName);
+            $this->webDriver->close();
+        }
+        $this->switchToWindow($currentWindowName);
+
+        // if about:blank (safari just empty) we cannot delete cookies.
+        if ('' !== $this->webDriver->getCurrentURL()) {
+            $this->webDriver->manage()->deleteAllCookies();
+        }
+
         // TODO: resizeWindow does not accept NULL
         $this->maximizeWindow();
         // reset timeout
@@ -320,7 +387,7 @@ class WebDriver extends CoreDriver
     {
         try {
             $this->webDriver->navigate()->to($url);
-        } catch (\Facebook\WebDriver\Exception\TimeoutException $e) {
+        } catch (TimeoutException $e) {
             throw new DriverException($e->getMessage(), $e->getCode(), $e);
         }
     }
@@ -342,7 +409,7 @@ class WebDriver extends CoreDriver
     {
         try {
             $this->webDriver->navigate()->refresh();
-        } catch (\Facebook\WebDriver\Exception\TimeoutException $e) {
+        } catch (TimeoutException $e) {
             throw new DriverException($e->getMessage(), $e->getCode(), $e);
         }
     }
@@ -373,7 +440,7 @@ class WebDriver extends CoreDriver
      */
     public function switchToWindow($name = null)
     {
-        if ('firefox' === $this->browserName) {
+        if ('firefox' === $this->browserName || 'safari' === $this->browserName) {
             // Firefox stores window IDs rather than window names and does not provide a working way to map the ids to
             // names.
             // Each time we switch to a window, we fetch the list of window IDs, and attempt to map them.
@@ -415,13 +482,16 @@ class WebDriver extends CoreDriver
 
     /**
      * @param string $name
-     *
-     * @return void
      */
-    public function switchToIFrame($name = null)
+    public function switchToIFrame($name = null): void
     {
         if ($name) {
-            $element = $this->webDriver->findElement(WebDriverBy::name($name));
+            try {
+                $element = $this->webDriver->findElement(WebDriverBy::name($name));
+            } catch (NoSuchElementException) {
+                $element = $this->webDriver->findElement(WebDriverBy::id($name));
+            }
+
             $this->webDriver->switchTo()->frame($element);
         } else {
             $this->webDriver->switchTo()->defaultContent();
@@ -494,7 +564,7 @@ class WebDriver extends CoreDriver
 
     public function findElementXpaths(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $nodes = $this->webDriver->findElements(WebDriverBy::xpath($xpath));
 
@@ -508,16 +578,19 @@ class WebDriver extends CoreDriver
 
     public function getTagName(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
 
         return $element->getTagName();
     }
 
+    /**
+     * @see https://www.w3.org/TR/webdriver1/#get-element-text
+     */
     public function getText(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $text = $element->getText();
@@ -532,7 +605,7 @@ class WebDriver extends CoreDriver
      */
     public function getHtml(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         return $this->executeJsOnXpath($xpath, 'return {{ELEMENT}}.innerHTML;');
     }
@@ -542,7 +615,7 @@ class WebDriver extends CoreDriver
      */
     public function getOuterHtml(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         return $this->executeJsOnXpath($xpath, 'return {{ELEMENT}}.outerHTML;');
     }
@@ -556,7 +629,7 @@ class WebDriver extends CoreDriver
     public function getAttribute(
         #[Language('xpath')]
         $xpath,
-        $name
+        $name,
     ) {
         $element = $this->findElement($xpath);
 
@@ -597,7 +670,7 @@ class WebDriver extends CoreDriver
      */
     public function getValue(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $elementName = strtolower($element->getTagName());
@@ -648,11 +721,6 @@ class WebDriver extends CoreDriver
     }
 
     /**
-     * @param string          $xpath
-     * @param string|string[] $value
-     *
-     * @return void
-     *
      * @throws DriverException
      * @throws ElementNotInteractableException
      * @throws NoSuchElementException
@@ -662,13 +730,17 @@ class WebDriver extends CoreDriver
      */
     public function setValue(
         #[Language('xpath')]
-        $xpath,
-        $value
-    ) {
+        string $xpath,
+        mixed $value,
+    ): void {
         $element = $this->findElement($xpath);
         $elementName = strtolower($element->getTagName());
 
         if ('select' === $elementName) {
+            if (is_bool($value)) {
+                throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a select input', gettype($value), $xpath));
+            }
+
             $select = new WebDriverSelect($element);
 
             if (is_array($value)) {
@@ -701,6 +773,10 @@ class WebDriver extends CoreDriver
             }
 
             if ('radio' === $elementType) {
+                if (is_bool($value) || is_array($value)) {
+                    throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a radio input', gettype($value), $xpath));
+                }
+
                 $radios = new WebDriverRadios($element);
                 $radios->selectByValue($value);
 
@@ -708,6 +784,10 @@ class WebDriver extends CoreDriver
             }
 
             if ('file' === $elementType) {
+                if (is_array($value) || is_bool($value)) {
+                    throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a file input', gettype($value), $xpath));
+                }
+
                 $this->attachFile($xpath, $value);
 
                 return;
@@ -717,6 +797,10 @@ class WebDriver extends CoreDriver
             // Each OS will show native color picker
             // See https://code.google.com/p/selenium/issues/detail?id=7650
             if ('color' === $elementType) {
+                if (is_array($value) || is_bool($value)) {
+                    throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a color input', gettype($value), $xpath));
+                }
+
                 $this->executeJsOnElement($element, sprintf('return {{ELEMENT}}.value = "%s"', $value));
 
                 return;
@@ -724,6 +808,10 @@ class WebDriver extends CoreDriver
 
             // See https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement
             if ('date' === $elementType || 'time' === $elementType) {
+                if (is_array($value) || is_bool($value)) {
+                    throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a color input', gettype($value), $xpath));
+                }
+
                 $date = date(DATE_ATOM, strtotime($value));
                 $this->executeJsOnElement($element, sprintf('return {{ELEMENT}}.valueAsDate = new Date("%s")', $date));
 
@@ -731,6 +819,11 @@ class WebDriver extends CoreDriver
             }
         }
 
+        if (in_array($elementName, ['input', 'textarea'])) {
+            if (is_array($value) || is_bool($value)) {
+                throw new DriverException(sprintf('Impossible to set %s value an element with XPath "%s" as it is a text input', gettype($value), $xpath));
+            }
+        }
         $value = (string) $value;
 
         if (in_array($elementName, ['input', 'textarea'])) {
@@ -744,11 +837,11 @@ class WebDriver extends CoreDriver
 
         // Trigger a change event.
         $script = <<<EOF
-{{ELEMENT}}.dispatchEvent(new Event("change", {
-    bubbles: true,
-    cancelable: false,
-}));
-EOF;
+            {{ELEMENT}}.dispatchEvent(new Event("change", {
+                bubbles: true,
+                cancelable: false,
+            }));
+            EOF;
 
         $this->executeJsOnXpath($xpath, $script);
     }
@@ -763,7 +856,7 @@ EOF;
      */
     public function check(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->ensureInputType($element, $xpath, 'checkbox', 'check');
@@ -785,7 +878,7 @@ EOF;
      */
     public function uncheck(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->ensureInputType($element, $xpath, 'checkbox', 'uncheck');
@@ -804,7 +897,7 @@ EOF;
      */
     public function isChecked(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         return $this->isSelected($xpath);
     }
@@ -826,7 +919,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $value,
-        $multiple = false
+        $multiple = false,
     ) {
         $element = $this->findElement($xpath);
         $tagName = strtolower($element->getTagName());
@@ -864,7 +957,7 @@ EOF;
      */
     public function isSelected(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
 
@@ -878,7 +971,7 @@ EOF;
      */
     public function click(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->clickOnElement($element);
@@ -890,15 +983,15 @@ EOF;
     private function scrollElementIntoViewIfRequired(WebDriverElement $element)
     {
         $js = <<<EOF
-    var node = {{ELEMENT}};
+                var node = {{ELEMENT}};
 
-    var rect = node.getBoundingClientRect();
-    var nodeAtRect = document.elementFromPoint(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
+                var rect = node.getBoundingClientRect();
+                var nodeAtRect = document.elementFromPoint(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
 
-    if (!node.contains(nodeAtRect)) {
-        node.scrollIntoView();
-    }
-EOF;
+                if (!node.contains(nodeAtRect)) {
+                    node.scrollIntoView();
+                }
+            EOF;
         $this->executeJsOnElement($element, $js);
     }
 
@@ -950,7 +1043,7 @@ EOF;
      */
     public function doubleClick(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->webDriver->action()->doubleClick($element)->perform();
@@ -963,7 +1056,7 @@ EOF;
      */
     public function rightClick(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->webDriver->action()->contextClick($element)->perform();
@@ -980,7 +1073,7 @@ EOF;
     public function attachFile(
         #[Language('xpath')]
         $xpath,
-        $path
+        $path,
     ) {
         $element = $this->findElement($xpath);
         $this->ensureInputType($element, $xpath, 'file', 'attach a file on');
@@ -992,7 +1085,7 @@ EOF;
 
     public function isVisible(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
 
@@ -1006,7 +1099,7 @@ EOF;
      */
     public function mouseOver(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $this->webDriver->action()->moveToElement($element)->perform();
@@ -1027,7 +1120,7 @@ EOF;
      */
     public function focus(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $action = $this->webDriver->action();
@@ -1045,7 +1138,7 @@ EOF;
      */
     public function blur(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
 
@@ -1065,7 +1158,7 @@ EOF;
         $xpath,
 
         $char,
-        $modifier = null
+        $modifier = null,
     ) {
         $this->sendKey($xpath, $char, $modifier);
     }
@@ -1090,7 +1183,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $char,
-        $modifier = null
+        $modifier = null,
     ) {
         // Own implementation of https://github.com/php-webdriver/php-webdriver/pull/803
         $element = $this->findElement($xpath);
@@ -1123,7 +1216,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $char,
-        $modifier = null
+        $modifier = null,
     ) {
         // Own implementation of https://github.com/php-webdriver/php-webdriver/pull/803
         $element = $this->findElement($xpath);
@@ -1186,7 +1279,7 @@ EOF;
 
         try {
             $this->webDriver->executeAsyncScript($script);
-        } catch (ScriptTimeoutException $e) {
+        } catch (ScriptTimeoutException|TimeoutException $e) {
             throw new DriverException($e->getMessage(), $e->getCode(), $e);
         }
     }
@@ -1202,7 +1295,7 @@ EOF;
 
     public function wait($timeout, $condition)
     {
-        $seconds = (int) ($timeout / 1000.0);
+        $seconds = $timeout / 1000.0;
         $wait = $this->webDriver->wait($seconds);
 
         if (is_string($condition)) {
@@ -1214,7 +1307,7 @@ EOF;
 
         try {
             return (bool) $wait->until($condition);
-        } catch (\Facebook\WebDriver\Exception\TimeoutException $e) {
+        } catch (TimeoutException $e) {
             return false;
         }
     }
@@ -1243,7 +1336,7 @@ EOF;
      */
     public function submitForm(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         $element = $this->findElement($xpath);
         $element->submit();
@@ -1284,7 +1377,7 @@ EOF;
      */
     private function findElement(
         #[Language('xpath')]
-        $xpath
+        $xpath,
     ) {
         return $this->webDriver->findElement(WebDriverBy::xpath($xpath));
     }
@@ -1305,7 +1398,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $type,
-        $action
+        $action,
     ) {
         if ('input' !== strtolower($element->getTagName()) || $type !== strtolower($element->getAttribute('type') ?: 'text')) {
             $message = 'Impossible to %s the element with XPath "%s" as it is not a %s input';
@@ -1371,7 +1464,7 @@ EOF;
         #[Language('xpath')]
         $xpath,
         $char,
-        $modifier
+        $modifier,
     ) {
         $element = $this->findElement($xpath);
         $char = $this->decodeChar($char);
