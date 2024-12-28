@@ -161,6 +161,6 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: logs_browser-${{ matrix.browser }}_php-${{ matrix.php }}
+          name: logs_browser-${{ matrix.browser }}_php-${{ matrix.php }}_headless-${{ matrix.headless }}_experimental-${{ matrix.experimental }}
           path: |
             logs
